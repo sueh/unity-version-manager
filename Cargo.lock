@@ -2747,7 +2747,7 @@ checksum = "323402cff2dd658f39ca17c789b502021b3f18707c91cdf22e3838e1b4023817"
 
 [[package]]
 name = "unity-hub"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "anyhow",
  "dirs-2",
@@ -2795,7 +2795,7 @@ dependencies = [
 
 [[package]]
 name = "unity-version-manager"
-version = "3.11.0"
+version = "3.12.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2879,7 +2879,7 @@ dependencies = [
 
 [[package]]
 name = "uvm_install"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "cfg-if",
  "clap",
@@ -2912,7 +2912,7 @@ dependencies = [
 
 [[package]]
 name = "uvm_install_graph"
-version = "0.14.0"
+version = "0.14.1"
 dependencies = [
  "cfg-if",
  "daggy",

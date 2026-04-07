@@ -1,6 +1,6 @@
 [package]
 name = "unity-version-manager"
-version = "3.11.0"
+version = "3.12.0"
 authors = ["Manfred Endres <manfred.endres@tslarusso.de>"]
 edition = "2018"
 description = "cli utility to install and manage unity versions"
@@ -25,8 +25,8 @@ flexi_logger = "0.31.2"
 log = { workspace = true }
 semver = { workspace = true }
 uvm_live_platform = { version = "0.8.1", path = "../uvm_live_platform", features = ["clap", "cache"] }
-unity-hub = { version = "0.6.0", path = "../unity-hub", features = ["mutate"] }
-uvm_install = { version = "0.22.0", path = "../uvm_install", features = ["clap"]}
+unity-hub = { version = "0.6.1", path = "../unity-hub", features = ["mutate"] }
+uvm_install = { version = "0.23.0", path = "../uvm_install", features = ["clap"]}
 uvm_gc = { version = "0.2.0", path = "../uvm_gc" }
 itertools = { workspace = true }
 serde_json = { workspace = true, optional = true }
