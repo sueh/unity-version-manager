@@ -340,25 +340,8 @@ impl InstallHandler for ModulePkgInstaller {
         Ok(())
     }
 
-    fn error_handler(&self) {
-        self.cleanup_directory_failable(&self.destination());
-    }
-
     fn installer(&self) -> &Path {
         self.installer()
-    }
-
-    fn before_install(&self) -> InstallerResult<()> {
-        if self.destination().exists() {
-            if self.destination().is_dir() {
-                info!("Destination directory {} already exists, removing it", self.destination().display());
-                fs::remove_dir_all(self.destination()).context("failed to remove the existing destination directory")?;
-            } else {
-                info!("Destination file {} already exists, removing it", self.destination().display());
-                fs::remove_file(self.destination()).context("failed to remove the existing destination file")?;
-            }
-        }
-        Ok(())
     }
 }
 
