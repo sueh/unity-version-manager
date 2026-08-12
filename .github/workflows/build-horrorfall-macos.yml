@@ -1,0 +1,47 @@
+name: Build HorrorFall UVM macOS binaries
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Git ref to build
+        required: true
+        default: v3.11.0-hf.1
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - aarch64-apple-darwin
+          - x86_64-apple-darwin
+
+    steps:
+      - name: Check out patched source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build UVM
+        run: cargo build --release --target "${{ matrix.target }}" --bin uvm
+
+      - name: Stage binary
+        run: cp "target/${{ matrix.target }}/release/uvm" "uvm-${{ matrix.target }}"
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: uvm-${{ matrix.target }}
+          path: uvm-${{ matrix.target }}
+          if-no-files-found: error
