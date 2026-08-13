@@ -144,11 +144,8 @@ mod tests {
         archive.write_all(b"new").unwrap();
         archive.finish().unwrap();
 
-        let installer = ModuleZipInstaller::new(
-            &archive_path,
-            &destination,
-            None::<(PathBuf, PathBuf)>,
-        );
+        let installer =
+            ModuleZipInstaller::new(&archive_path, &destination, None::<(PathBuf, PathBuf)>);
         installer.install().unwrap();
 
         assert_eq!(
