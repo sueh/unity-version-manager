@@ -6,14 +6,35 @@ on:
       source_ref:
         description: Git ref to build
         required: true
-        default: v3.11.0-hf.1
+        default: v3.11.0-hf.2
 
 permissions:
   contents: read
 
 jobs:
+  validate:
+    name: Validate patched source
+    runs-on: macos-latest
+    steps:
+      - name: Check out patched source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Test installer library
+        run: cargo test -p uvm_install --lib
+
   build:
     name: Build ${{ matrix.target }}
+    needs: validate
     runs-on: macos-latest
     strategy:
       fail-fast: false
