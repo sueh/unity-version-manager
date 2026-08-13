@@ -2,7 +2,7 @@ use crate::install::error::InstallerErrorInner::CopyFailed;
 use crate::install::error::{InstallerErrorInner, InstallerResult};
 use crate::install::installer::{BaseInstaller, Installer, InstallerWithDestination};
 use crate::install::{InstallHandler, UnityModule};
-use log::{debug, info};
+use log::debug;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::{fs, io};
@@ -27,6 +27,41 @@ impl<V, I> Installer<V, Dmg, I> {
         let child = Command::new("cp")
             .arg("-a")
             .arg(source)
+            .arg(destination)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
+
+        let output = child.wait_with_output()?;
+        if !output.status.success() {
+            return Err(CopyFailed(
+                source.display().to_string(),
+                destination.display().to_string(),
+                String::from_utf8_lossy(&output.stderr).to_string(),
+            )
+            .into());
+        }
+        Ok(())
+    }
+
+    fn copy_dir_contents<P, D>(&self, source: P, destination: D) -> InstallerResult<()>
+    where
+        P: AsRef<Path>,
+        D: AsRef<Path>,
+    {
+        let source = source.as_ref();
+        let destination = destination.as_ref();
+
+        fs::DirBuilder::new().recursive(true).create(destination)?;
+
+        debug!(
+            "Copy contents of {} to {}",
+            source.display(),
+            destination.display()
+        );
+        let child = Command::new("cp")
+            .arg("-a")
+            .arg(source.join("."))
             .arg(destination)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -113,7 +148,24 @@ impl InstallHandler for ModuleDmgWithDestinationInstaller {
     fn install_handler(&self) -> InstallerResult<()> {
         let installer = self.installer();
         let destination = self.destination();
-        self.install_module_from_dmg(installer, destination)
+        use ::dmg::Attach;
+
+        debug!(
+            "install from dmg {} to {}",
+            installer.display(),
+            destination.display()
+        );
+        let volume = Attach::new(installer).with()?;
+        debug!("installer mounted at {}", volume.mount_point.display());
+
+        let app_path = self
+            .find_file_in_dir(&volume.mount_point, |entry| {
+                entry.file_name().to_str().unwrap().ends_with(".app")
+            })
+            .context("failed to find .app in package")?;
+
+        self.copy_dir_contents(app_path, destination)
+            .context("failed to copy .app contents to destination")
     }
 
     fn installer(&self) -> &Path {
@@ -126,17 +178,37 @@ impl InstallHandler for ModuleDmgWithDestinationInstaller {
         }
         Ok(())
     }
+}
 
-    fn before_install(&self) -> InstallerResult<()> {
-        if self.destination().exists() {
-            if self.destination().is_dir() {
-                info!("Destination directory {} already exists, removing it", self.destination().display());
-                fs::remove_dir_all(self.destination()).context("failed to remove the existing destination directory")?;
-            } else {
-                info!("Destination file {} already exists, removing it", self.destination().display());
-                fs::remove_file(self.destination()).context("failed to remove the existing destination file")?;
-            }
-        }
-        Ok(())
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn copy_dir_contents_preserves_existing_destination_contents() {
+        let temp = TempDir::new().unwrap();
+        let source = temp.path().join("module.app");
+        let destination = temp.path().join("destination");
+        fs::create_dir_all(source.join("Contents")).unwrap();
+        fs::create_dir_all(&destination).unwrap();
+        fs::write(source.join("Contents/new.txt"), "new").unwrap();
+        fs::write(destination.join("existing.txt"), "existing").unwrap();
+
+        let installer = ModuleDmgWithDestinationInstaller::new(
+            temp.path().join("module.dmg"),
+            &destination,
+            None::<(PathBuf, PathBuf)>,
+        );
+        installer.copy_dir_contents(&source, &destination).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(destination.join("existing.txt")).unwrap(),
+            "existing"
+        );
+        assert_eq!(
+            fs::read_to_string(destination.join("Contents/new.txt")).unwrap(),
+            "new"
+        );
     }
 }

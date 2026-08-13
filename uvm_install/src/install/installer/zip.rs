@@ -1,4 +1,4 @@
-use crate::install::error::{InstallerError, InstallerResult};
+use crate::install::error::InstallerResult;
 use crate::install::installer::{Installer, InstallerWithDestination};
 use crate::install::{InstallHandler, UnityModule};
 use crate::*;
@@ -116,24 +116,48 @@ impl InstallHandler for ModuleZipInstaller {
         self.deploy_zip_with_rename(installer, destination, rename_handler)
     }
 
-    fn before_install(&self) -> std::result::Result<(), InstallerError> {
-        if self.destination().exists() {
-            if self.destination().is_dir() {
-                info!("Destination directory {} already exists, removing it", self.destination().display());
-                fs::remove_dir_all(self.destination()).context("failed to remove the existing destination directory")?;
-            } else {
-                info!("Destination file {} already exists, removing it", self.destination().display());
-                fs::remove_file(self.destination()).context("failed to remove the existing destination file")?;
-            }
-        }
-        Ok(())
-    }
-
-    fn error_handler(&self) {
-        self.cleanup_directory_failable(self.destination());
-    }
-
     fn installer(&self) -> &Path {
         self.installer()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use tempfile::TempDir;
+    use zip::write::SimpleFileOptions;
+
+    #[test]
+    fn module_install_preserves_existing_destination_contents() {
+        let temp = TempDir::new().unwrap();
+        let archive_path = temp.path().join("module.zip");
+        let destination = temp.path().join("destination");
+        fs::create_dir_all(&destination).unwrap();
+        fs::write(destination.join("existing.txt"), "existing").unwrap();
+
+        let archive_file = File::create(&archive_path).unwrap();
+        let mut archive = zip::ZipWriter::new(archive_file);
+        archive
+            .start_file("new/new.txt", SimpleFileOptions::default())
+            .unwrap();
+        archive.write_all(b"new").unwrap();
+        archive.finish().unwrap();
+
+        let installer = ModuleZipInstaller::new(
+            &archive_path,
+            &destination,
+            None::<(PathBuf, PathBuf)>,
+        );
+        installer.install().unwrap();
+
+        assert_eq!(
+            fs::read_to_string(destination.join("existing.txt")).unwrap(),
+            "existing"
+        );
+        assert_eq!(
+            fs::read_to_string(destination.join("new/new.txt")).unwrap(),
+            "new"
+        );
     }
 }
