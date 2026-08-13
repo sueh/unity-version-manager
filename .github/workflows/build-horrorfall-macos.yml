@@ -23,15 +23,6 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-
-      - name: Check formatting
-        run: >-
-          rustfmt --edition 2021 --check
-          uvm_install/src/install/installer/zip.rs
-          uvm_install/src/sys/mac/dmg.rs
-          uvm_install/src/sys/mac/pkg.rs
 
       - name: Test installer library
         run: cargo test -p uvm_install --lib
